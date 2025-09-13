@@ -36,6 +36,34 @@ jobs:
           curl -s http://localhost:8080/readyz | grep -q "ok"
           curl -s http://localhost:8080/livez | grep -q "ok"
 
+          # Test DELETE endpoint
+          echo "Testing DELETE endpoint..."
+
+          # Test 1: Create and delete a file
+          echo "test content" > test-file.txt
+          curl -s -X DELETE http://localhost:8080/test-file.txt | grep -q "Deleted"
+          [ ! -f test-file.txt ] || (echo "File deletion failed" && exit 1)
+          echo "✓ File deletion test passed"
+
+          # Test 2: Create and delete a directory
+          mkdir -p test-dir/subdir
+          echo "nested content" > test-dir/test.txt
+          curl -s -X DELETE http://localhost:8080/test-dir | grep -q "Deleted"
+          [ ! -d test-dir ] || (echo "Directory deletion failed" && exit 1)
+          echo "✓ Directory deletion test passed"
+
+          # Test 3: Attempt to delete non-existent file (should return 404)
+          curl -s -w "%{http_code}" -X DELETE http://localhost:8080/non-existent.txt | grep -q "404"
+          echo "✓ 404 for non-existent file test passed"
+
+          # Test 4: Forbidden operations - root path
+          curl -s -w "%{http_code}" -X DELETE http://localhost:8080/ | grep -q "403"
+          echo "✓ Forbidden root deletion test passed"
+
+          # Test 5: Forbidden operations - wildcard paths
+          curl -s -w "%{http_code}" -X DELETE "http://localhost:8080/*" | grep -q "403"
+          echo "✓ Forbidden wildcard deletion test passed"
+
   ci:
     needs: [e2e]
     runs-on: ubuntu-latest
